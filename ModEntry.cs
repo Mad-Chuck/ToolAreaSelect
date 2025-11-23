@@ -35,10 +35,10 @@ namespace ToolAreaSelect {
             if (!ctrl)
                 return;
 
-            if (Game1.player.CurrentTool is not WateringCan)
+            if (Game1.player.CurrentTool is not (WateringCan or Hoe))
                 return;
 
-            var can = (WateringCan) Game1.player.CurrentTool;
+            var can = Game1.player.CurrentTool;
 
             Helper.Input.SuppressScrollWheel();
 
@@ -61,9 +61,14 @@ namespace ToolAreaSelect {
             if (Game1.activeClickableMenu != null)
                 return;
 
-            if (Game1.player.CurrentTool is not WateringCan)
+            if (Game1.player.CurrentTool is not (WateringCan or Hoe))
                 return;
 
+            DrawToolArea(e);
+        }
+
+        private void DrawToolArea(RenderedWorldEventArgs e)
+        {
             Vector2 mouseTile = Game1.GetPlacementGrabTile();
             Vector2 toolTile = GetPlacementToolTile();
             // HACK: call protected method
@@ -114,16 +119,16 @@ namespace ToolAreaSelect {
                 return;
             if (IsCursorOnUI(e))
                 return;
-            if (Game1.player.CurrentTool is not WateringCan can)
+            if (Game1.player.CurrentTool is not (WateringCan or Hoe))
                 return;
 
             Helper.Input.Suppress(SButton.MouseLeft);
 
             var tile = Game1.GetPlacementGrabTile();
 
-            if (Game1.currentLocation.isWaterTile((int)tile.X, (int)tile.Y))
+            if (Game1.player.CurrentTool is WateringCan && Game1.currentLocation.isWaterTile((int)tile.X, (int)tile.Y))
             {
-                TryRefillWateringCan(can);
+                TryRefillWateringCan();
                 return;
             }
 
@@ -138,17 +143,18 @@ namespace ToolAreaSelect {
         {
             Monitor.Log($"Arrived at tile {_pendingTile}", LogLevel.Debug);
 
-            if (Game1.player.CurrentTool is not WateringCan can || _pendingTile is null)
+            if (Game1.player.CurrentTool is not (WateringCan or Hoe) || _pendingTile is null)
                 return;
 
             _pendingPath = null;
+            var pendingTile = _pendingTile;
             _pendingTile = null;
 
             // watering logic
             Game1.player.toolPower.Value = _powerSelected;      // Ensures correct power since it's read from player
             Farmer.useTool(Game1.player);
 
-            Monitor.Log($"Watered tiles at {_pendingTile}", LogLevel.Debug);
+            Monitor.Log($"Tool used on {pendingTile}", LogLevel.Debug);
         }
 
         private bool IsCursorOnUI(ButtonPressedEventArgs e)
@@ -189,10 +195,11 @@ namespace ToolAreaSelect {
             return toolTile;
         }
 
-        private void TryRefillWateringCan(WateringCan can)
+        private void TryRefillWateringCan()
         {
             Vector2 tile = Game1.GetPlacementGrabTile();
-            can.DoFunction(Game1.currentLocation, (int)tile.X * 64, (int)tile.Y * 64, _powerSelected, Game1.player);
+            Game1.player.CurrentTool.DoFunction(
+                Game1.currentLocation,(int)tile.X * 64, (int)tile.Y * 64, _powerSelected, Game1.player);
 
             Monitor.Log($"Refilled watering can", LogLevel.Debug);
         }
