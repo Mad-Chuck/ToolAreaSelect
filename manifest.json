@@ -1,10 +1,12 @@
 {
   "Name": "ToolAreaSelect",
   "Author": "MadChuck",
-  "Version": "0.1.0",
+  "Version": "0.1.1",
   "Description": "This mod changes the way watering can works. You can select tool power by using ctrl + scroll. Having power selected you can use left mouse button to water desired area.",
   "UniqueID": "MadChuck.ToolAreaSelect",
   "EntryDll": "ToolAreaSelect.dll",
   "MinimumApiVersion": "4.0.0",
-  "UpdateKeys": []  
+  "UpdateKeys": [
+    "Github:Mad-Chuck/ToolAreaSelect"
+  ]
 }
