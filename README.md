@@ -26,7 +26,6 @@ This mod is a proof of concept of how I imagined the tools could work when using
 ## ⚠ Known issues:
 
 - Missing walking animation
-- Missing can texture when watering
 - Missing jittering when arrived to selected tile
 - Usage on lava is buggy (allows to water lava in places where it shouldn't be possible, power sometimes is broken)
 - Not possible to water pet's bowl directly

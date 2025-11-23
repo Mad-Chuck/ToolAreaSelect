@@ -152,7 +152,8 @@ namespace ToolAreaSelect {
 
             // watering logic
             Game1.player.toolPower.Value = _powerSelected;      // Ensures correct power since it's read from player
-            Farmer.useTool(Game1.player);
+            Game1.player.BeginUsingTool();
+            Game1.player.EndUsingTool();
 
             Monitor.Log($"Tool used on {pendingTile}", LogLevel.Debug);
         }
