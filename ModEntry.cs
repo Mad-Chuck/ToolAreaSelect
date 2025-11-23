@@ -3,12 +3,10 @@ using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
-using StardewValley.Characters;
 using StardewValley.Enchantments;
 using StardewValley.Pathfinding;
 using StardewValley.Tools;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace ToolAreaSelect {
     internal sealed class ModEntry : Mod
@@ -23,11 +21,8 @@ namespace ToolAreaSelect {
             helper.Events.Input.ButtonPressed += this.OnButtonPressed;
             helper.Events.Input.MouseWheelScrolled += OnMouseWheelScrolled;
             helper.Events.Display.RenderedWorld += OnRenderedWorld;
-            helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
         }
-        private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
-        {
-        }
+
         private void OnMouseWheelScrolled(object? sender, MouseWheelScrolledEventArgs e)
         {
             if (!Context.IsWorldReady)
@@ -60,6 +55,7 @@ namespace ToolAreaSelect {
             Game1.playSound("shwip");
             Monitor.Log($"Watering power changed: {_powerSelected}/{maxPower}", LogLevel.Debug);
         }
+
         private void OnRenderedWorld(object? sender, RenderedWorldEventArgs e)
         {
             if (Game1.activeClickableMenu != null)
@@ -67,30 +63,36 @@ namespace ToolAreaSelect {
 
             if (Game1.player.CurrentTool is not WateringCan)
                 return;
-        
 
-            //Game1.player.ActiveObject.drawPlacementBounds(Game1.spriteBatch, currentLocation);
-
-            var mouseTile = Game1.GetPlacementGrabTile();
-
-            // get tiles
+            Vector2 mouseTile = Game1.GetPlacementGrabTile();
+            Vector2 toolTile = GetPlacementToolTile();
             // HACK: call protected method
-            Type type = Game1.player.CurrentTool.GetType();
-            var output = (List<Vector2>) type.InvokeMember(
-                "tilesAffected",
-                BindingFlags.Instance | BindingFlags.InvokeMethod | BindingFlags.NonPublic,
-                null,
-                Game1.player.CurrentTool,
-                //new object[] { Game1.player.GetToolLocation() / 64f, _powerSelected, Game1.player }
-                new object[] { mouseTile, _powerSelected, Game1.player }
-            );
+            var tiles = (List<Vector2>)Game1.player.CurrentTool.GetType().InvokeMember(
+                    "tilesAffected",
+                    BindingFlags.Instance | BindingFlags.InvokeMethod | BindingFlags.NonPublic,
+                    null,
+                    Game1.player.CurrentTool,
+                    new object[] { toolTile, _powerSelected, Game1.player }
+                );
 
-            // for each tile
-            foreach (var v in output)
+            // draw red border tile
+            e.SpriteBatch.Draw(
+                Game1.mouseCursors,
+                Game1.GlobalToLocal(new Vector2((int)mouseTile.X * 64, (int)mouseTile.Y * 64)),
+                new Rectangle(448, 128, 64, 64),
+                Color.White,
+                0f,
+                Vector2.Zero,
+                1f,
+                SpriteEffects.None,
+                0.01f
+            );
+            foreach (var v in tiles)
             {
-                // draw 
-                e.SpriteBatch.Draw(Game1.mouseCursors,
-                    Game1.GlobalToLocal(new Vector2((int) v.X * 64, (int) v.Y * 64)),
+                // draw green tile
+                e.SpriteBatch.Draw(
+                    Game1.mouseCursors,
+                    Game1.GlobalToLocal(new Vector2((int)v.X * 64, (int)v.Y * 64)),
                     new Rectangle(194, 388, 16, 16),
                     Color.White,
                     0f,
@@ -106,27 +108,19 @@ namespace ToolAreaSelect {
         {
             if (!Context.IsWorldReady)
                 return;
-
-            // używamy konewki tylko w grze, nie w menu
             if (Game1.activeClickableMenu != null)
                 return;
-
-            // only left mouse button
             if (e.Button != SButton.MouseLeft)
                 return;
-
             if (IsCursorOnUI(e))
                 return;
-
             if (Game1.player.CurrentTool is not WateringCan can)
                 return;
 
             Helper.Input.Suppress(SButton.MouseLeft);
 
-            // pobierz tile kursora
             var tile = Game1.GetPlacementGrabTile();
 
-            // 🟦 NOWY WARUNEK: jeśli klikamy wodę → REFILL bez chodzenia
             if (Game1.currentLocation.isWaterTile((int)tile.X, (int)tile.Y))
             {
                 TryRefillWateringCan(can);
@@ -134,10 +128,7 @@ namespace ToolAreaSelect {
             }
 
             _pendingTile = tile;
-
-            // uruchom pathfinding
             _pendingPath = new PathFindController(Game1.player, Game1.currentLocation, new Point((int)tile.X, (int)tile.Y), Game1.player.FacingDirection, new PathFindController.endBehavior(OnReachedTile));
-
             Game1.player.controller = _pendingPath;
 
             Monitor.Log($"Moving to {new Point((int)tile.X, (int)tile.Y)}", LogLevel.Debug);
@@ -145,36 +136,19 @@ namespace ToolAreaSelect {
 
         private void OnReachedTile(Character c, GameLocation location)
         {
-            // w przyszłości tu odpalisz podlewanie
             Monitor.Log($"Arrived at tile {_pendingTile}", LogLevel.Debug);
 
             if (Game1.player.CurrentTool is not WateringCan can || _pendingTile is null)
                 return;
 
             _pendingPath = null;
-
-            // Pobierz pola objęte zasięgiem
-            Type type = can.GetType();
-            var affectedTiles = (List<Vector2>)type.InvokeMember(
-                "tilesAffected",
-                BindingFlags.Instance | BindingFlags.InvokeMethod | BindingFlags.NonPublic,
-                null,
-                can,
-                new object[] { _pendingTile.Value, _powerSelected, Game1.player }
-            );
-
-            // Odtwórz animację + efekt konewki (to robi vanilla kod)
-            Game1.player.lastClick = _pendingTile.Value * 64f;
-            can.DoFunction(location, (int)_pendingTile.Value.X * 64, (int)_pendingTile.Value.Y * 64, _powerSelected, Game1.player);
-
-            // Ustaw animację „watering”
-            Game1.player.jitterStrength = 0.5f;
-            Farmer.useTool(Game1.player);
-
-            Monitor.Log($"Watered {affectedTiles.Count} tiles at {_pendingTile}", LogLevel.Debug);
-
             _pendingTile = null;
 
+            // watering logic
+            Game1.player.toolPower.Value = _powerSelected;      // Ensures correct power since it's read from player
+            Farmer.useTool(Game1.player);
+
+            Monitor.Log($"Watered tiles at {_pendingTile}", LogLevel.Debug);
         }
 
         private bool IsCursorOnUI(ButtonPressedEventArgs e)
@@ -189,20 +163,38 @@ namespace ToolAreaSelect {
             return false;
         }
 
+        private Vector2 GetPlacementToolTile()
+        {
+            Vector2 toolTile = Game1.GetPlacementGrabTile();
+            if (Game1.player.FacingDirection == 0)
+            {
+                // up
+                toolTile.Y -= 1;
+            }
+            else if (Game1.player.FacingDirection == 1)
+            {
+                // right
+                toolTile.X += 1;
+            }
+            else if (Game1.player.FacingDirection == 2)
+            {
+                // down
+                toolTile.Y += 1;
+            }
+            else if (Game1.player.FacingDirection == 3)
+            {
+                // left
+                toolTile.X -= 1;
+            }
+            return toolTile;
+        }
+
         private void TryRefillWateringCan(WateringCan can)
         {
-            if (can.WaterLeft >= can.waterCanMax)
-            {
-                Game1.playSound("cancel");
-                Monitor.Log("Watering can already full.", LogLevel.Debug);
-                return;
-            }
+            Vector2 tile = Game1.GetPlacementGrabTile();
+            can.DoFunction(Game1.currentLocation, (int)tile.X * 64, (int)tile.Y * 64, _powerSelected, Game1.player);
 
-            can.WaterLeft = can.waterCanMax;
-            Game1.playSound("slosh");
-            Game1.player.jitterStrength = 0.3f;
-
-            Monitor.Log($"Refilled watering can: {can.WaterLeft}/{can.waterCanMax}", LogLevel.Debug);
+            Monitor.Log($"Refilled watering can", LogLevel.Debug);
         }
     }
 }
