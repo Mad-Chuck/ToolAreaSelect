@@ -132,20 +132,23 @@ namespace ToolAreaSelect {
                 SpriteEffects.None,
                 0.01f
             );
-            foreach (var v in tiles)
+            if (!Game1.currentLocation.isWaterTile((int)mouseTile.X, (int)mouseTile.Y))
             {
-                // draw green tile
-                e.SpriteBatch.Draw(
-                    Game1.mouseCursors,
-                    Game1.GlobalToLocal(new Vector2((int)v.X * 64, (int)v.Y * 64)),
-                    new Rectangle(194, 388, 16, 16),
-                    Color.White,
-                    0f,
-                    Vector2.Zero,
-                    4f,
-                    SpriteEffects.None,
-                    0.01f
-                );
+                foreach (var v in tiles)
+                {
+                    // draw green tile
+                    e.SpriteBatch.Draw(
+                        Game1.mouseCursors,
+                        Game1.GlobalToLocal(new Vector2((int)v.X * 64, (int)v.Y * 64)),
+                        new Rectangle(194, 388, 16, 16),
+                        Color.White,
+                        0f,
+                        Vector2.Zero,
+                        4f,
+                        SpriteEffects.None,
+                        0.01f
+                    );
+                }
             }
         }
 
