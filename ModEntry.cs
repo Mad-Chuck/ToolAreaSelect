@@ -13,10 +13,10 @@ namespace ToolAreaSelect {
     {
         private const int CHARGING_TICKS_NUMBER = 38;
         private int _powerSelected = 0;
-        private PathFindController? _pendingPath;
-        private Vector2? _pendingTile;
-        private bool _charging;
-        private int _chargeDelay;
+        private PathFindController? _pendingPath = null;
+        private Vector2? _pendingTile = null;
+        private bool _charging = false;
+        private int _chargeDelay = 0;
 
         public override void Entry(IModHelper helper)
         {
@@ -24,7 +24,18 @@ namespace ToolAreaSelect {
             helper.Events.Input.MouseWheelScrolled += OnMouseWheelScrolled;
             helper.Events.Display.RenderedWorld += OnRenderedWorld;
             helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
+            helper.Events.GameLoop.SaveLoaded += OnSaveLoaded;
         }
+
+        private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
+        {
+            _powerSelected = 0;
+            _pendingPath = null;
+            _pendingTile = null;
+            _charging = false;
+            _chargeDelay = 0;
+        }
+
         private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
         {
             if (!_charging)
