@@ -11,16 +11,42 @@ using System.Reflection;
 namespace ToolAreaSelect {
     internal sealed class ModEntry : Mod
     {
+        private const int CHARGING_TICKS_NUMBER = 38;
         private int _powerSelected = 0;
-
         private PathFindController? _pendingPath;
         private Vector2? _pendingTile;
+        private bool _charging;
+        private int _chargeDelay;
 
         public override void Entry(IModHelper helper)
         {
             helper.Events.Input.ButtonPressed += OnButtonPressed;
             helper.Events.Input.MouseWheelScrolled += OnMouseWheelScrolled;
             helper.Events.Display.RenderedWorld += OnRenderedWorld;
+            helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
+        }
+        private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
+        {
+            if (!_charging)
+                return;
+
+            _chargeDelay--;
+            if (_chargeDelay < 0)
+                _chargeDelay = 0;
+
+            if (_chargeDelay <= 0)
+            {
+                if (Game1.player.toolPower.Value < _powerSelected)
+                {
+                    Game1.player.toolPowerIncrease();
+                    _chargeDelay = CHARGING_TICKS_NUMBER;
+                }
+                else
+                {
+                    _charging = false;
+                    Game1.player.EndUsingTool();
+                }
+            }
         }
 
         private void OnMouseWheelScrolled(object? sender, MouseWheelScrolledEventArgs e)
@@ -33,6 +59,9 @@ namespace ToolAreaSelect {
                 Helper.Input.IsDown(SButton.RightControl);
 
             if (!ctrl)
+                return;
+
+            if (Game1.player.UsingTool)
                 return;
 
             if (Game1.player.CurrentTool is not (WateringCan or Hoe))
@@ -124,6 +153,9 @@ namespace ToolAreaSelect {
 
             Helper.Input.Suppress(SButton.MouseLeft);
 
+            if (Game1.player.UsingTool)
+                return;
+
             var tile = Game1.GetPlacementGrabTile();
 
             if (Game1.player.CurrentTool is WateringCan && Game1.currentLocation.isWaterTile((int)tile.X, (int)tile.Y))
@@ -151,9 +183,17 @@ namespace ToolAreaSelect {
             _pendingTile = null;
 
             // watering logic
-            Game1.player.toolPower.Value = _powerSelected;      // Ensures correct power since it's read from player
             Game1.player.BeginUsingTool();
-            Game1.player.EndUsingTool();
+
+            if (Game1.player.CurrentTool is WateringCan can && can.WaterLeft <= 0)
+                return;
+
+            // start charging
+            _charging = true;
+            _chargeDelay = CHARGING_TICKS_NUMBER;
+            Game1.player.toolPower.Value = 0;
+            Game1.player.jitterStrength = 0f;
+            Game1.player.canMove = false;
 
             Monitor.Log($"Tool used on {pendingTile}", LogLevel.Debug);
         }
