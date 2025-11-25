@@ -141,7 +141,7 @@ namespace ToolAreaSelect {
                 SpriteEffects.None,
                 0.01f
             );
-            if (!Game1.currentLocation.isWaterTile((int)mouseTile.X, (int)mouseTile.Y))
+            if (!Game1.currentLocation.CanRefillWateringCanOnTile((int)mouseTile.X, (int)mouseTile.Y))
             {
                 foreach (var v in tiles)
                 {
@@ -183,7 +183,7 @@ namespace ToolAreaSelect {
 
             var tile = Game1.GetPlacementGrabTile();
 
-            if (Game1.player.CurrentTool is WateringCan && Game1.currentLocation.isWaterTile((int)tile.X, (int)tile.Y))
+            if (Game1.player.CurrentTool is WateringCan && Game1.currentLocation.CanRefillWateringCanOnTile((int)tile.X, (int)tile.Y))
             {
                 TryRefillWateringCan();
                 return;
