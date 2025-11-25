@@ -17,6 +17,7 @@ namespace ToolAreaSelect {
         private Vector2? _pendingTile = null;
         private bool _charging = false;
         private int _chargeDelay = 0;
+        private int? _facingDirection = null;
 
         public override void Entry(IModHelper helper)
         {
@@ -34,6 +35,7 @@ namespace ToolAreaSelect {
             _pendingTile = null;
             _charging = false;
             _chargeDelay = 0;
+            _facingDirection = null;
         }
 
         private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
@@ -56,6 +58,7 @@ namespace ToolAreaSelect {
                 {
                     _charging = false;
                     Game1.player.EndUsingTool();
+                    _facingDirection = null;
                 }
             }
         }
@@ -109,6 +112,10 @@ namespace ToolAreaSelect {
 
         private void DrawToolArea(RenderedWorldEventArgs e)
         {
+            int facingDirectionBackup = Game1.player.FacingDirection;
+            if (_facingDirection is not null)
+                Game1.player.FacingDirection = (int)_facingDirection;
+
             Vector2 mouseTile = Game1.GetPlacementGrabTile();
             Vector2 toolTile = GetPlacementToolTile();
             // HACK: call protected method
@@ -119,6 +126,8 @@ namespace ToolAreaSelect {
                     Game1.player.CurrentTool,
                     new object[] { toolTile, _powerSelected, Game1.player }
                 );
+
+            Game1.player.FacingDirection = facingDirectionBackup;
 
             // draw red border tile
             e.SpriteBatch.Draw(
@@ -169,6 +178,8 @@ namespace ToolAreaSelect {
 
             if (Game1.player.UsingTool)
                 return;
+
+            _facingDirection = Game1.player.FacingDirection;
 
             var tile = Game1.GetPlacementGrabTile();
 
