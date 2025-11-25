@@ -7,8 +7,8 @@ This mod is a proof of concept of how I imagined the tools could work when using
 
 ## 🎮 How to Use
 
-1. Equip a watering can.
-1. Hold ctrl and use the mouse wheel to adjust the watering power.
+1. Equip a hoe or watering can.
+1. Hold ctrl and use the mouse wheel to adjust the power.
 1. Left-click on the ground to walk to the clicked tile and use tool on selected area automatically once you arrive.
 1. Click on a water tile to instantly refill the can.
 
@@ -26,8 +26,6 @@ This mod is a proof of concept of how I imagined the tools could work when using
 ## ⚠ Known issues:
 
 - Missing walking animation
-- Usage on lava is buggy (allows to water lava in places where it shouldn't be possible, power sometimes is broken)
-- Not possible to fill watering can from ponds
 - Possible to use this mod to get out of the map in some places
 - Multiplayer and controller usage were not tested
 
