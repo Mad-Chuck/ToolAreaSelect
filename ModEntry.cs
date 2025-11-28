@@ -13,7 +13,6 @@ namespace ToolAreaSelect {
     {
         private const int CHARGING_TICKS_NUMBER = 38;
         private int _powerSelected = 0;
-        private PathFindController? _pendingPath = null;
         private Vector2? _pendingTile = null;
         private bool _charging = false;
         private int _chargeDelay = 0;
@@ -31,7 +30,6 @@ namespace ToolAreaSelect {
         private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
         {
             _powerSelected = 0;
-            _pendingPath = null;
             _pendingTile = null;
             _charging = false;
             _chargeDelay = 0;
@@ -56,9 +54,8 @@ namespace ToolAreaSelect {
                 }
                 else
                 {
-                    _charging = false;
                     Game1.player.EndUsingTool();
-                    _facingDirection = null;
+                    _charging = false;
                 }
             }
         }
@@ -68,30 +65,31 @@ namespace ToolAreaSelect {
             if (!Context.IsWorldReady)
                 return;
 
-            bool ctrl =
-                Helper.Input.IsDown(SButton.LeftControl) ||
-                Helper.Input.IsDown(SButton.RightControl);
-
-            if (!ctrl)
-                return;
-
             if (Game1.player.UsingTool)
                 return;
+            if (IsWalking() || _charging)
+            {
+                Helper.Input.SuppressScrollWheel();
+                return;
+            }
 
             if (Game1.player.CurrentTool is not (WateringCan or Hoe))
                 return;
 
-            var can = Game1.player.CurrentTool;
+            bool ctrl = Helper.Input.IsDown(SButton.LeftControl) || Helper.Input.IsDown(SButton.RightControl);
+            if (!ctrl)
+                return;
 
             Helper.Input.SuppressScrollWheel();
 
+            var canOrHoe = Game1.player.CurrentTool;
             if (e.Delta > 0)
                 _powerSelected++;
             else if (e.Delta < 0)
                 _powerSelected--;
-            int maxPower = can.UpgradeLevel;
-            bool hasReaching = can.enchantments?.Any(en => en is ReachingToolEnchantment) ?? false;
-            if (can.UpgradeLevel == 4 && hasReaching)
+            int maxPower = canOrHoe.UpgradeLevel;
+            bool hasReaching = canOrHoe.enchantments?.Any(enchant => enchant is ReachingToolEnchantment) ?? false;
+            if (canOrHoe.UpgradeLevel == 4 && hasReaching)
                 maxPower = 5;
             _powerSelected = Math.Clamp(_powerSelected, 0, maxPower);
 
@@ -165,35 +163,53 @@ namespace ToolAreaSelect {
         {
             if (!Context.IsWorldReady)
                 return;
-            if (Game1.activeClickableMenu != null)
-                return;
-            if (e.Button != SButton.MouseLeft)
-                return;
-            if (IsCursorOnUI(e))
+            if (Game1.activeClickableMenu is not null)
                 return;
             if (Game1.player.CurrentTool is not (WateringCan or Hoe))
                 return;
 
-            Helper.Input.Suppress(SButton.MouseLeft);
+            if (IsWalking() || _charging)
+            {
+                Helper.Input.Suppress(e.Button);
+                return;
+            }
+
+            if (e.Button != SButton.MouseLeft)
+                return;
+            if (IsCursorOnUI(e))
+                return;
+            if (!Game1.player.CanMove)
+                return;
+
+            Helper.Input.Suppress(e.Button);
 
             if (Game1.player.UsingTool)
                 return;
-
-            _facingDirection = Game1.player.FacingDirection;
 
             var tile = Game1.GetPlacementGrabTile();
 
             if (Game1.player.CurrentTool is WateringCan && Game1.currentLocation.CanRefillWateringCanOnTile((int)tile.X, (int)tile.Y))
             {
-                TryRefillWateringCan();
+                RefillWateringCan();
                 return;
             }
 
             _pendingTile = tile;
-            _pendingPath = new PathFindController(Game1.player, Game1.currentLocation, new Point((int)tile.X, (int)tile.Y), Game1.player.FacingDirection, new PathFindController.endBehavior(OnReachedTile));
-            Game1.player.controller = _pendingPath;
+            var controller = new PathFindController(
+                Game1.player,
+                Game1.currentLocation,
+                new Point((int)tile.X, (int)tile.Y),
+                Game1.player.FacingDirection,
+                new PathFindController.endBehavior(OnReachedTile)
+            );
+            Game1.player.controller = controller;
 
-            Monitor.Log($"Moving to {new Point((int)tile.X, (int)tile.Y)}", LogLevel.Debug);
+            if (!IsWalking())
+                _facingDirection = null;
+            else
+                _facingDirection = Game1.player.FacingDirection;
+
+            Monitor.Log($"Moving to {tile}", LogLevel.Debug);
         }
 
         private void OnReachedTile(Character c, GameLocation location)
@@ -203,9 +219,9 @@ namespace ToolAreaSelect {
             if (Game1.player.CurrentTool is not (WateringCan or Hoe) || _pendingTile is null)
                 return;
 
-            _pendingPath = null;
             var pendingTile = _pendingTile;
             _pendingTile = null;
+            Game1.player.controller = null;
 
             // watering logic
             Game1.player.BeginUsingTool();
@@ -218,7 +234,7 @@ namespace ToolAreaSelect {
             _chargeDelay = CHARGING_TICKS_NUMBER;
             Game1.player.toolPower.Value = 0;
             Game1.player.jitterStrength = 0f;
-            Game1.player.canMove = false;
+            _facingDirection = null;
 
             Monitor.Log($"Tool used on {pendingTile}", LogLevel.Debug);
         }
@@ -233,6 +249,11 @@ namespace ToolAreaSelect {
             }
 
             return false;
+        }
+
+        private bool IsWalking()
+        {
+            return Game1.player.controller is not null && Game1.player.controller.pathToEndPoint is not null;
         }
 
         private Vector2 GetPlacementToolTile()
@@ -261,7 +282,7 @@ namespace ToolAreaSelect {
             return toolTile;
         }
 
-        private void TryRefillWateringCan()
+        private void RefillWateringCan()
         {
             Vector2 tile = Game1.GetPlacementGrabTile();
             Game1.player.CurrentTool.DoFunction(
