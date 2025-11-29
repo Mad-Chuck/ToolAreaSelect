@@ -26,7 +26,6 @@ This mod is a proof of concept of how I imagined the tools could work when using
 ## ⚠ Known issues:
 
 - Missing walking animation
-- Possible to use this mod to get out of the map in some places
 - Multiplayer and controller usage were not tested
 
 ## 📬 Feedback and contributions
