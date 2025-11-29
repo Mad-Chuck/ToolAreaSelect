@@ -64,17 +64,16 @@ namespace ToolAreaSelect {
         {
             if (!Context.IsWorldReady)
                 return;
-
             if (Game1.player.UsingTool)
                 return;
+            if (Game1.player.CurrentTool is not (WateringCan or Hoe))
+                return;
+
             if (IsWalking() || _charging)
             {
                 Helper.Input.SuppressScrollWheel();
                 return;
             }
-
-            if (Game1.player.CurrentTool is not (WateringCan or Hoe))
-                return;
 
             bool ctrl = Helper.Input.IsDown(SButton.LeftControl) || Helper.Input.IsDown(SButton.RightControl);
             if (!ctrl)
@@ -188,6 +187,13 @@ namespace ToolAreaSelect {
 
             var tile = Game1.GetPlacementGrabTile();
 
+            if (IsWarpTile(tile))
+            {
+                Game1.playSound("cancel");
+                Monitor.Log("Cannot move: path ends at warp tile", LogLevel.Debug);
+                return;
+            }
+
             if (Game1.player.CurrentTool is WateringCan && Game1.currentLocation.CanRefillWateringCanOnTile((int)tile.X, (int)tile.Y))
             {
                 RefillWateringCan();
@@ -202,6 +208,14 @@ namespace ToolAreaSelect {
                 Game1.player.FacingDirection,
                 new PathFindController.endBehavior(OnReachedTile)
             );
+
+            if (ContainsWarpTile(controller))
+            {
+                Game1.playSound("cancel");
+                Monitor.Log("Cannot move: path crosses warp tile", LogLevel.Debug);
+                return;
+            }
+
             Game1.player.controller = controller;
 
             if (!IsWalking())
@@ -247,8 +261,24 @@ namespace ToolAreaSelect {
                 if (menu.isWithinBounds((int)e.Cursor.ScreenPixels.X, (int)e.Cursor.ScreenPixels.Y))
                     return true;
             }
-
             return false;
+        }
+
+        private bool ContainsWarpTile(PathFindController controller)
+        {
+            if (controller.pathToEndPoint is not null)
+            {
+                // Maybe it's possible to reduce complexity to O(n*log(n))?
+                foreach (var node in controller.pathToEndPoint)
+                    if (IsWarpTile(new Vector2(node.X, node.Y)))
+                        return true;
+            }
+            return false;
+        }
+        
+        private bool IsWarpTile(Vector2 tile)
+        {
+            return Game1.currentLocation.warps.Any(warpTile => warpTile.X == (int)tile.X && warpTile.Y == (int)tile.Y);
         }
 
         private bool IsWalking()
