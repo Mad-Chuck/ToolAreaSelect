@@ -66,6 +66,8 @@ namespace ToolAreaSelect {
                 return;
             if (Game1.player.UsingTool)
                 return;
+            if (IsRiddingHorse())
+                return;
             if (Game1.player.CurrentTool is not (WateringCan or Hoe))
                 return;
 
@@ -109,6 +111,9 @@ namespace ToolAreaSelect {
 
         private void DrawToolArea(RenderedWorldEventArgs e)
         {
+            if (IsRiddingHorse())
+                return;
+
             int facingDirectionBackup = Game1.player.FacingDirection;
             if (_facingDirection is not null)
                 Game1.player.FacingDirection = (int)_facingDirection;
@@ -163,6 +168,8 @@ namespace ToolAreaSelect {
             if (!Context.IsWorldReady)
                 return;
             if (Game1.activeClickableMenu is not null)
+                return;
+            if (IsRiddingHorse())
                 return;
             if (Game1.player.CurrentTool is not (WateringCan or Hoe))
                 return;
@@ -255,10 +262,13 @@ namespace ToolAreaSelect {
 
         private bool IsCursorOnUI(ButtonPressedEventArgs e)
         {
+            ICursorPosition cursor = Helper.Input.GetCursorPosition();
+            Vector2 mouseUIScaled = Utility.ModifyCoordinatesForUIScale(cursor.ScreenPixels);
+
             // Check if cursor over HUD (np. toolbar, health bar, equipment slots)
             foreach (var menu in Game1.onScreenMenus)
             {
-                if (menu.isWithinBounds((int)e.Cursor.ScreenPixels.X, (int)e.Cursor.ScreenPixels.Y))
+                if (menu.isWithinBounds((int)mouseUIScaled.X, (int)mouseUIScaled.Y))
                     return true;
             }
             return false;
@@ -284,6 +294,10 @@ namespace ToolAreaSelect {
         private bool IsWalking()
         {
             return Game1.player.controller is not null && Game1.player.controller.pathToEndPoint is not null;
+        }
+        private bool IsRiddingHorse()
+        {
+            return Game1.player.mount != null;
         }
 
         private Vector2 GetPlacementToolTile()
