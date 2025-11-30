@@ -255,10 +255,13 @@ namespace ToolAreaSelect {
 
         private bool IsCursorOnUI(ButtonPressedEventArgs e)
         {
+            ICursorPosition cursor = Helper.Input.GetCursorPosition();
+            Vector2 mouseUIScaled = Utility.ModifyCoordinatesForUIScale(cursor.ScreenPixels);
+
             // Check if cursor over HUD (np. toolbar, health bar, equipment slots)
             foreach (var menu in Game1.onScreenMenus)
             {
-                if (menu.isWithinBounds((int)e.Cursor.ScreenPixels.X, (int)e.Cursor.ScreenPixels.Y))
+                if (menu.isWithinBounds((int)mouseUIScaled.X, (int)mouseUIScaled.Y))
                     return true;
             }
             return false;
