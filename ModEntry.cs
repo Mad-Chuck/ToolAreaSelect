@@ -113,6 +113,8 @@ namespace ToolAreaSelect {
         {
             if (IsRiddingHorse())
                 return;
+            if (IsUsingController())
+                return;
 
             int facingDirectionBackup = Game1.player.FacingDirection;
             if (_facingDirection is not null)
@@ -295,6 +297,11 @@ namespace ToolAreaSelect {
         {
             return Game1.player.controller is not null && Game1.player.controller.pathToEndPoint is not null;
         }
+        private bool IsUsingController()
+        {
+            return Game1.options.gamepadControls;
+        }
+
         private bool IsRiddingHorse()
         {
             return Game1.player.mount != null;
