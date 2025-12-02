@@ -26,7 +26,7 @@ This mod is a proof of concept of how I imagined the tools could work when using
 ## ⚠ Known issues:
 
 - Missing walking animation
-- Multiplayer and controller usage were not tested
+- Multiplayer was not tested
 
 ## 📬 Feedback and contributions
 
